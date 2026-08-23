@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Junktris V58 — Live Junk Art Audit</title>
+<style>
+:root{--bg:#15100d;--panel:#241b16;--panel2:#30231d;--ink:#fff3e2;--muted:#b8afa6;--orange:#ff7a29;--red:#d6423b;--green:#5ae08a;--gold:#e8a33d}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(#1f1713,#110d0b);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+.wrap{max-width:980px;margin:auto;padding:18px 14px 40px}.top{position:sticky;top:0;z-index:3;background:rgba(21,16,13,.94);backdrop-filter:blur(10px);padding:10px 0 12px;border-bottom:1px solid rgba(255,122,41,.18)}
+h1{margin:0;font-size:25px;line-height:1}.sub{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.35}.legend{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.pill{font-size:9px;font-weight:900;letter-spacing:.08em;padding:5px 7px;border-radius:999px;background:#3a2d25;color:#ddd}.pill.fix{background:#5b2724;color:#ffd9d6}.pill.remove{background:#4a3822;color:#ffe2a8}.pill.keep{background:#203c2b;color:#caffd8}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.24)}.artbox{height:145px;padding:10px;background:radial-gradient(circle at 50% 35%,rgba(255,180,110,.10),transparent 55%),#17120f;display:flex;align-items:center;justify-content:center}.artbox canvas{width:100%;height:100%;display:block}.meta{padding:10px}.name{font-size:15px;font-weight:900}.row{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font-size:11px}.tag{margin-top:8px;display:inline-block;font-size:9px;font-weight:900;letter-spacing:.08em;padding:4px 6px;border-radius:999px}.tag.keep{background:#203c2b;color:#caffd8}.tag.fix{background:#5b2724;color:#ffd9d6}.tag.remove{background:#4a3822;color:#ffe2a8}.note{margin-top:14px;padding:12px;border:1px solid rgba(255,122,41,.22);border-radius:12px;background:rgba(255,122,41,.06);font-size:12px;line-height:1.45;color:#e9ddd1}.error{padding:30px;text-align:center;color:#ffd0cc}.src{font-family:monospace;color:#f6b37d;font-size:10px}@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.artbox{height:155px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>JUNKTRIS — LIVE V58 ART AUDIT</h1>
+    <div class="sub">These cards call the exact <span class="src">drawArt()</span> routine inside the currently published V58 game. No replacement art is used on this page.</div>
+    <div class="legend"><span class="pill keep">KEEP</span><span class="pill fix">FIX / DIFFERENTIATE</span><span class="pill remove">REMOVE IN NEXT BUILD</span></div>
+  </div>
+  <div id="grid" class="grid"><div class="error">Loading current game artwork…</div></div>
+  <div class="note"><b>Shed is not shown here because it does not exist in V58 yet.</b> This page is only an audit of artwork that is actually in the current playable game. The planned Shed will get its own art after the current set is approved.</div>
+</div>
+<iframe id="game" src="./index.html?inventory-audit=1" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px" aria-hidden="true"></iframe>
+<script>
+const order=["fridge","oven","micro","tv","couch","loveseat","recliner","twin","mattress","dresser","coffee","washer","dryer","trash","lamp","table"];
+const plan={recliner:["fix","FIX ART"],dryer:["fix","DISTINGUISH FROM WASHER"],table:["remove","REMOVE — COFFEE TABLE ONLY"]};
+const keepDefault=["keep","KEEP"];
+function dims(mask){let h=mask.length,w=0;for(const r of mask)w=Math.max(w,r.length);return {w,h};}
+function drawCard(w,key,host){
+  const d=w.DEFS[key]; if(!d)return;
+  const card=document.createElement('div');card.className='card';
+  const artbox=document.createElement('div');artbox.className='artbox';
+  const cv=document.createElement('canvas');cv.width=520;cv.height=300;artbox.appendChild(cv);card.appendChild(artbox);
+  const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
+  const dm=dims(d.mask),unit=Math.min(430/dm.w,215/dm.h),pw=dm.w*unit,ph=dm.h*unit,x=(520-pw)/2,y=(250-ph)/2+10;
+  // footprint backing, matching the solid-cell philosophy of V58
+  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#9c8065';ctx.fillRect(x,y,pw,ph);ctx.restore();
+  w.drawArt(ctx,d.art,x,y,pw,ph,0,false);
+  // cell grid so the real game footprint is visible
+  ctx.save();ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=1;
+  for(let i=0;i<=dm.w;i++){ctx.beginPath();ctx.moveTo(x+i*unit,y);ctx.lineTo(x+i*unit,y+ph);ctx.stroke();}
+  for(let j=0;j<=dm.h;j++){ctx.beginPath();ctx.moveTo(x,y+j*unit);ctx.lineTo(x+pw,y+j*unit);ctx.stroke();}
+  ctx.restore();
+  const meta=document.createElement('div');meta.className='meta';
+  const nm=document.createElement('div');nm.className='name';nm.textContent=d.name;meta.appendChild(nm);
+  const row=document.createElement('div');row.className='row';row.innerHTML='<span>'+dm.w+' × '+dm.h+' cells</span><span>'+d.wt+' lb</span>';meta.appendChild(row);
+  const act=plan[key]||keepDefault;const tag=document.createElement('span');tag.className='tag '+act[0];tag.textContent=act[1];meta.appendChild(tag);
+  card.appendChild(meta);host.appendChild(card);
+}
+document.getElementById('game').addEventListener('load',()=>{
+  try{
+    const w=document.getElementById('game').contentWindow;
+    if(!w.DEFS||typeof w.drawArt!=='function')throw new Error('V58 art functions not available');
+    const host=document.getElementById('grid');host.innerHTML='';
+    order.forEach(k=>drawCard(w,k,host));
+  }catch(e){document.getElementById('grid').innerHTML='<div class="error">Could not read the live V58 artwork: '+e.message+'</div>';}
+});
+</script>
+</body>
+</html>

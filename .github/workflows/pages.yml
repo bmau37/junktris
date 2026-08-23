@@ -27,11 +27,26 @@ jobs:
       - name: Verify preserved V58
         run: test -f v58-junktris-final.html
 
-      - name: Prepare public site
+      - name: Prepare public site and guarded V59 candidate
+        shell: bash
         run: |
           mkdir -p _site
           cp v58-junktris-final.html _site/index.html
-          if [ -f v59-test.html ]; then cp v59-test.html _site/v59-test.html; fi
+          set +e
+          python3 scripts/build_v59_candidate.py v58-junktris-final.html _site/v59-test.html > /tmp/v59-build.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            V59_STATUS="$status" python3 - <<'PY'
+          from pathlib import Path
+          import html, os
+          log = Path('/tmp/v59-build.log').read_text(encoding='utf-8', errors='replace')
+          status = os.environ.get('V59_STATUS', '?')
+          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V59 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}.ok{{color:#5ae08a}}</style></head><body><h1>V59 candidate did not build yet</h1><p>V58 is safe and unchanged. Build exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
+          Path('_site/v59-test.html').write_text(page, encoding='utf-8')
+          PY
+          fi
+          rm -f /tmp/v59-build.log
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages

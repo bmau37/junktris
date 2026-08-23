@@ -4,6 +4,7 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@drawable/junktris_icon"
         android:label="Junktris"
         android:theme="@style/Theme.Junktris"
         android:usesCleartextTraffic="false">

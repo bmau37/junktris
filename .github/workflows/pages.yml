@@ -31,8 +31,7 @@ jobs:
         run: |
           mkdir -p _site
           cp v58-junktris-final.html _site/index.html
-          python3 scripts/build_v59_candidate.py v58-junktris-final.html _site/v59-test.html
-          if [ -f inventory-audit.html ]; then cp inventory-audit.html _site/inventory-audit.html; fi
+          if [ -f v59-test.html ]; then cp v59-test.html _site/v59-test.html; fi
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages

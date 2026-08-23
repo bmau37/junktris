@@ -42,27 +42,44 @@ jobs:
           cp pwa/icon-512.png android-app/app/src/main/res/drawable/junktris_icon.png
 
       - name: Build debug APK
+        id: apkbuild
+        continue-on-error: true
         working-directory: android-app
-        run: gradle :app:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --stacktrace 2>&1 | tee /tmp/junktris-android-build.log
 
-      - name: Publish APK into repository
+      - name: Publish visible build result
+        if: always()
         run: |
           mkdir -p downloads
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk downloads/Junktris-Android-Test.apk
+          if [ "${{ steps.apkbuild.outcome }}" = "success" ] && [ -f android-app/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android-app/app/build/outputs/apk/debug/app-debug.apk downloads/Junktris-Android-Test.apk
+            printf 'JUNKTRIS ANDROID BUILD: PASS\n' > downloads/android-build-status.txt
+          else
+            rm -f downloads/Junktris-Android-Test.apk
+            printf 'JUNKTRIS ANDROID BUILD: FAILED\n\n' > downloads/android-build-status.txt
+            if [ -f /tmp/junktris-android-build.log ]; then tail -n 160 /tmp/junktris-android-build.log >> downloads/android-build-status.txt; fi
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add downloads/Junktris-Android-Test.apk
+          git add -A -- downloads/Junktris-Android-Test.apk downloads/android-build-status.txt
           if git diff --cached --quiet; then
-            echo "APK unchanged."
+            echo "Build result unchanged."
           else
-            git commit -m "Build Junktris Android test APK [skip ci]"
+            git commit -m "Record Junktris Android build result [skip ci]"
             git push
           fi
 
       - name: Upload APK artifact
+        if: steps.apkbuild.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Junktris-Android-Test
           path: downloads/Junktris-Android-Test.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Fail workflow if APK build failed
+        if: steps.apkbuild.outcome != 'success'
+        run: exit 1

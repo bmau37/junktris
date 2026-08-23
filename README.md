@@ -10,4 +10,9 @@ Public deployment repository for the Junktris mobile game.
 
 ## Deployment
 
-This repository is intended to publish the current verified Junktris build as a static GitHub Pages site.
+This repository publishes the current verified Junktris build as a static GitHub Pages site.
+
+## Android test build
+
+- Current Android test APK: `downloads/Junktris-Android-Test.apk`
+- Android build status: PASS

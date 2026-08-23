@@ -33,7 +33,7 @@ jobs:
           mkdir -p _site
           cp v58-junktris-final.html _site/index.html
           set +e
-          python3 scripts/build_v59_candidate.py v58-junktris-final.html _site/v59-test.html > /tmp/v59-build.log 2>&1
+          python3 scripts/build_v59_candidate_fixed.py v58-junktris-final.html _site/v59-test.html > /tmp/v59-build.log 2>&1
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then

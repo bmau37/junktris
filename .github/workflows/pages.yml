@@ -3,8 +3,6 @@ name: Deploy Junktris V58
 on:
   push:
     branches: ["main"]
-    paths:
-      - "v58-junktris-final.html"
   workflow_dispatch:
 
 permissions:
@@ -45,4 +43,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

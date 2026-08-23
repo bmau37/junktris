@@ -31,6 +31,7 @@ jobs:
         run: |
           mkdir -p _site
           cp v58-junktris-final.html _site/index.html
+          if [ -f inventory-audit.html ]; then cp inventory-audit.html _site/inventory-audit.html; fi
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages

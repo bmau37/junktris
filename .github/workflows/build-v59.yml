@@ -49,3 +49,5 @@ jobs:
             git commit -m "Generate V59 candidate [skip ci]"
             git push
           fi
+
+# second trigger after workflow exists on main

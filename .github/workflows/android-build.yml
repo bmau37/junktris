@@ -12,7 +12,6 @@ on:
       - "scripts/build_v59_pwa.py"
       - "scripts/build_v60_difficulty.py"
       - "scripts/build_v60_difficulty_fixed.py"
-      - "pwa/icon-512.png"
       - ".github/workflows/android-build.yml"
   workflow_dispatch:
 
@@ -52,11 +51,6 @@ jobs:
           mkdir -p android-app/app/src/main/assets/junktris
           python3 scripts/build_v60_difficulty_fixed.py v58-junktris-final.html android-app/app/src/main/assets/junktris/index.html
           test -s android-app/app/src/main/assets/junktris/index.html
-
-      - name: Prepare launcher icon
-        run: |
-          mkdir -p android-app/app/src/main/res/drawable
-          cp pwa/icon-512.png android-app/app/src/main/res/drawable/junktris_icon.png
 
       - name: Build debug APK
         id: apkbuild

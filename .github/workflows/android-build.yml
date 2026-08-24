@@ -58,28 +58,42 @@ jobs:
           mkdir -p android-app/app/src/main/res/drawable
           cp pwa/icon-512.png android-app/app/src/main/res/drawable/junktris_icon.png
 
-      - name: Build debug APK and release bundle
-        id: androidbuild
+      - name: Build debug APK
+        id: apkbuild
         continue-on-error: true
         working-directory: android-app
         run: |
           set -o pipefail
-          gradle :app:assembleDebug :app:bundleRelease --stacktrace 2>&1 | tee /tmp/junktris-android-build.log
+          gradle :app:assembleDebug --no-daemon --max-workers=2 --stacktrace 2>&1 | tee /tmp/junktris-apk-build.log
+
+      - name: Build release app bundle
+        id: bundlebuild
+        if: steps.apkbuild.outcome == 'success'
+        continue-on-error: true
+        working-directory: android-app
+        run: |
+          set -o pipefail
+          gradle :app:bundleRelease --no-daemon --max-workers=2 --stacktrace 2>&1 | tee /tmp/junktris-bundle-build.log
 
       - name: Publish visible debug build result
         if: always()
         run: |
           mkdir -p downloads
-          if [ "${{ steps.androidbuild.outcome }}" = "success" ] && [ -f android-app/app/build/outputs/apk/debug/app-debug.apk ]; then
+          if [ "${{ steps.apkbuild.outcome }}" = "success" ] && [ -f android-app/app/build/outputs/apk/debug/app-debug.apk ]; then
             cp android-app/app/build/outputs/apk/debug/app-debug.apk downloads/Junktris-Android-Test.apk
-            printf 'JUNKTRIS ANDROID BUILD: PASS — LOCKED V60 EMBEDDED\n' > downloads/android-build-status.txt
+            if [ "${{ steps.bundlebuild.outcome }}" = "success" ]; then
+              printf 'JUNKTRIS ANDROID BUILD: PASS — LOCKED V60 EMBEDDED — AAB BUILT\n' > downloads/android-build-status.txt
+            else
+              printf 'JUNKTRIS ANDROID BUILD: APK PASS — LOCKED V60 EMBEDDED — AAB FAILED\n\n' > downloads/android-build-status.txt
+              if [ -f /tmp/junktris-bundle-build.log ]; then tail -n 120 /tmp/junktris-bundle-build.log >> downloads/android-build-status.txt; fi
+            fi
           else
             rm -f downloads/Junktris-Android-Test.apk
-            printf 'JUNKTRIS ANDROID BUILD: FAILED\n\n' > downloads/android-build-status.txt
-            if [ -f /tmp/junktris-android-build.log ]; then tail -n 180 /tmp/junktris-android-build.log >> downloads/android-build-status.txt; fi
+            printf 'JUNKTRIS ANDROID BUILD: APK FAILED\n\n' > downloads/android-build-status.txt
+            if [ -f /tmp/junktris-apk-build.log ]; then tail -n 180 /tmp/junktris-apk-build.log >> downloads/android-build-status.txt; fi
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "4189824+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- downloads/Junktris-Android-Test.apk downloads/android-build-status.txt
           if git diff --cached --quiet; then
             echo "Build result unchanged."
@@ -89,13 +103,13 @@ jobs:
           fi
 
       - name: Stage unsigned Play bundle
-        if: steps.androidbuild.outcome == 'success'
+        if: steps.bundlebuild.outcome == 'success'
         run: |
           test -f android-app/app/build/outputs/bundle/release/app-release.aab
           cp android-app/app/build/outputs/bundle/release/app-release.aab /tmp/Junktris-Play-Unsigned.aab
 
       - name: Upload APK artifact
-        if: steps.androidbuild.outcome == 'success'
+        if: steps.apkbuild.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Junktris-Android-V60-Test
@@ -104,7 +118,7 @@ jobs:
           retention-days: 14
 
       - name: Upload unsigned Play bundle artifact
-        if: steps.androidbuild.outcome == 'success'
+        if: steps.bundlebuild.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Junktris-Play-Unsigned-AAB
@@ -112,6 +126,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Fail workflow if Android build failed
-        if: steps.androidbuild.outcome != 'success'
+      - name: Fail workflow if APK build failed
+        if: steps.apkbuild.outcome != 'success'
+        run: exit 1
+
+      - name: Fail workflow if bundle build failed
+        if: steps.apkbuild.outcome == 'success' && steps.bundlebuild.outcome != 'success'
         run: exit 1

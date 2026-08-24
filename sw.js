@@ -1,6 +1,6 @@
-const CACHE='junktris-v59-pwa-1';
+const CACHE='junktris-public-v1';
 const CORE=[
-  './v59-test.html',
+  './',
   './junktris.webmanifest',
   './pwa/icon-192.png',
   './pwa/icon-512.png'
@@ -23,9 +23,9 @@ self.addEventListener('fetch',event=>{
     event.respondWith(
       fetch(req).then(res=>{
         const copy=res.clone();
-        caches.open(CACHE).then(cache=>cache.put('./v59-test.html',copy));
+        caches.open(CACHE).then(cache=>cache.put('./',copy));
         return res;
-      }).catch(()=>caches.match('./v59-test.html'))
+      }).catch(()=>caches.match('./'))
     );
     return;
   }

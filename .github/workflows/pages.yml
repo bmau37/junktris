@@ -1,4 +1,4 @@
-name: Deploy Junktris V58 + V59 Candidate
+name: Deploy Junktris Public
 
 on:
   push:
@@ -27,31 +27,43 @@ jobs:
       - name: Verify preserved V58
         run: test -f v58-junktris-final.html
 
-      - name: Prepare public site and audited V59 candidate
+      - name: Prepare public Junktris release
         shell: bash
         run: |
           mkdir -p _site/pwa _site/downloads
-          cp v58-junktris-final.html _site/index.html
+
+          # Permanent rollback copy. Never overwrite the preserved repository source.
+          cp v58-junktris-final.html _site/v58-junktris-final.html
+
           cp junktris.webmanifest _site/junktris.webmanifest
           cp sw.js _site/sw.js
           cp pwa/icon-192.png _site/pwa/icon-192.png
           cp pwa/icon-512.png _site/pwa/icon-512.png
           if [ -f downloads/Junktris-Android-Test.apk ]; then cp downloads/Junktris-Android-Test.apk _site/downloads/Junktris-Android-Test.apk; fi
+
+          # Build the polished V59 release from the preserved V58 baseline.
           set +e
           python3 scripts/build_v59_pwa.py v58-junktris-final.html _site/v59-test.html > /tmp/v59-build.log 2>&1
           status=$?
           set -e
-          if [ "$status" -ne 0 ]; then
+
+          if [ "$status" -eq 0 ]; then
+            cp _site/v59-test.html _site/index.html
+            printf 'JUNKTRIS PUBLIC RELEASE: V59 PASS\n' > _site/release-status.txt
+          else
+            # Never take the public game down because a candidate build failed.
+            cp v58-junktris-final.html _site/index.html
             V59_STATUS="$status" python3 - <<'PY'
           from pathlib import Path
           import html, os
           log = Path('/tmp/v59-build.log').read_text(encoding='utf-8', errors='replace')
           status = os.environ.get('V59_STATUS', '?')
-          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V59 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V59 candidate did not build yet</h1><p>V58 is safe and unchanged. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
+          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V59 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V59 candidate did not build</h1><p>The public root safely fell back to preserved V58. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
           Path('_site/v59-test.html').write_text(page, encoding='utf-8')
-          Path('_site/v59-audit.txt').write_text('V59 PWA AUDIT: FAILED\n' + log, encoding='utf-8')
+          Path('_site/release-status.txt').write_text('JUNKTRIS PUBLIC RELEASE: V59 FAILED — ROOT FALLBACK V58\n' + log, encoding='utf-8')
           PY
           fi
+
           rm -f /tmp/v59-build.log
           touch _site/.nojekyll
 

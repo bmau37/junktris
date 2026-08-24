@@ -1,4 +1,4 @@
-const CACHE='junktris-public-v1';
+const CACHE='junktris-public-v2';
 const CORE=[
   './',
   './junktris.webmanifest',

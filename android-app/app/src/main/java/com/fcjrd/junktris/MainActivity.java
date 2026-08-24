@@ -14,7 +14,7 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private static final String GAME_URL = "https://bmau37.github.io/junktris/v59-test.html?source=android";
+    private static final String GAME_URL = "file:///android_asset/junktris/index.html";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setLoadsImagesAutomatically(true);
-        settings.setAllowFileAccess(false);
+        settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(false);
 
         webView.setWebChromeClient(new WebChromeClient());
@@ -47,15 +47,18 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                String host = uri.getHost();
-                if (host != null && host.equalsIgnoreCase("bmau37.github.io")) {
+                String scheme = uri.getScheme();
+                if (scheme == null || scheme.equalsIgnoreCase("file") || scheme.equalsIgnoreCase("about")) {
                     return false;
                 }
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                } catch (Exception ignored) {
+                if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    } catch (Exception ignored) {
+                    }
+                    return true;
                 }
-                return true;
+                return false;
             }
         });
 

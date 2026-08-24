@@ -1,4 +1,4 @@
-name: Deploy Junktris Public + V60 Candidate
+name: Deploy Junktris Public V60
 
 on:
   push:
@@ -27,12 +27,12 @@ jobs:
       - name: Verify preserved V58
         run: test -f v58-junktris-final.html
 
-      - name: Prepare public Junktris release and V60 candidate
+      - name: Build locked public release
         shell: bash
         run: |
           mkdir -p _site/pwa _site/downloads
 
-          # Permanent rollback copy. Never overwrite the preserved repository source.
+          # Permanent rollback source. Never overwrite this repository file.
           cp v58-junktris-final.html _site/v58-junktris-final.html
 
           cp junktris.webmanifest _site/junktris.webmanifest
@@ -41,44 +41,54 @@ jobs:
           cp pwa/icon-512.png _site/pwa/icon-512.png
           if [ -f downloads/Junktris-Android-Test.apk ]; then cp downloads/Junktris-Android-Test.apk _site/downloads/Junktris-Android-Test.apk; fi
 
-          # PUBLIC ROOT: keep polished V59 stable while V60 is tested separately.
+          # Build V59 as the immediate rollback release.
           set +e
           python3 scripts/build_v59_pwa.py v58-junktris-final.html _site/v59-test.html > /tmp/v59-build.log 2>&1
           v59_status=$?
           set -e
 
           if [ "$v59_status" -eq 0 ]; then
-            cp _site/v59-test.html _site/index.html
-            printf 'JUNKTRIS PUBLIC RELEASE: V59 PASS\n' > _site/release-status.txt
+            cp _site/v59-test.html _site/v59-rollback.html
           else
-            # Never take the public game down because a build failed.
-            cp v58-junktris-final.html _site/index.html
             V59_STATUS="$v59_status" python3 - <<'PY'
           from pathlib import Path
           import html, os
           log = Path('/tmp/v59-build.log').read_text(encoding='utf-8', errors='replace')
           status = os.environ.get('V59_STATUS', '?')
-          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V59 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V59 candidate did not build</h1><p>The public root safely fell back to preserved V58. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
+          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V59 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V59 rollback did not build</h1><p>Preserved V58 remains available. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
           Path('_site/v59-test.html').write_text(page, encoding='utf-8')
-          Path('_site/release-status.txt').write_text('JUNKTRIS PUBLIC RELEASE: V59 FAILED — ROOT FALLBACK V58\n' + log, encoding='utf-8')
           PY
           fi
 
-          # V60 TEST ONLY: Easy / Medium / Hard. Failure here can never affect public V59.
+          # LOCKED PUBLIC RELEASE: V60 Easy / Medium / Hard.
           set +e
           python3 scripts/build_v60_difficulty_fixed.py v58-junktris-final.html _site/v60-test.html > /tmp/v60-build.log 2>&1
           v60_status=$?
           set -e
 
-          if [ "$v60_status" -ne 0 ]; then
-            V60_STATUS="$v60_status" python3 - <<'PY'
+          if [ "$v60_status" -eq 0 ]; then
+            cp _site/v60-test.html _site/index.html
+            cp _site/v60-test.html _site/v60-locked.html
+            printf 'JUNKTRIS PUBLIC RELEASE: V60 LOCKED — PASS\n' > _site/release-status.txt
+          else
+            # A bad future V60 build can never take the public game down.
+            if [ -f _site/v59-rollback.html ]; then
+              cp _site/v59-rollback.html _site/index.html
+              fallback='V59'
+            else
+              cp v58-junktris-final.html _site/index.html
+              fallback='V58'
+            fi
+            V60_STATUS="$v60_status" V60_FALLBACK="$fallback" python3 - <<'PY'
           from pathlib import Path
           import html, os
           log = Path('/tmp/v60-build.log').read_text(encoding='utf-8', errors='replace')
           status = os.environ.get('V60_STATUS', '?')
-          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V60 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V60 difficulty candidate did not build yet</h1><p>Public V59 is safe and unchanged. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
+          fallback = os.environ.get('V60_FALLBACK', 'preserved build')
+          page = f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Junktris V60 Build Check</title><style>body{{font-family:Arial,sans-serif;background:#17110e;color:#fff3e2;padding:22px;max-width:760px;margin:auto}}h1{{color:#ff7a29}}pre{{white-space:pre-wrap;background:#2a211c;padding:14px;border-radius:12px;border:1px solid #5b493f;color:#ffd4c8}}</style></head><body><h1>V60 release build did not publish</h1><p>Public root safely stayed on {html.escape(fallback)}. Build/audit exit code: {html.escape(status)}</p><pre>{html.escape(log)}</pre></body></html>'''
           Path('_site/v60-test.html').write_text(page, encoding='utf-8')
           Path('_site/v60-audit.txt').write_text('V60 DIFFICULTY AUDIT: FAILED\n' + log, encoding='utf-8')
+          Path('_site/release-status.txt').write_text(f'JUNKTRIS PUBLIC RELEASE: V60 FAILED — ROOT FALLBACK {fallback}\n' + log, encoding='utf-8')
           PY
           fi
 

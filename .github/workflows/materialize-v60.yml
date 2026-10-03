@@ -1,0 +1,44 @@
+name: Materialize Junktris V60 Full Playable File
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/materialize-v60.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build locked V60 standalone HTML
+        run: |
+          python3 scripts/build_v60_difficulty_fixed.py v58-junktris-final.html Junktris-Full-Playable.html
+          test -s Junktris-Full-Playable.html
+
+      - name: Verify full playable file
+        run: |
+          grep -q 'Junktris' Junktris-Full-Playable.html
+          grep -q 'diffEasy' Junktris-Full-Playable.html
+          grep -q 'diffMedium' Junktris-Full-Playable.html
+          grep -q 'diffHard' Junktris-Full-Playable.html
+
+      - name: Commit full playable file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Junktris-Full-Playable.html
+          if git diff --cached --quiet; then
+            echo "Full playable file already current."
+          else
+            git commit -m "Publish full Junktris V60 playable HTML [skip ci]"
+            git push
+          fi
